@@ -1,0 +1,5 @@
+# sudo apt install -y libgl1 libglib2.0-0 ninja-build cmake build-essential
+
+torch
+torchvision
+torchaudio

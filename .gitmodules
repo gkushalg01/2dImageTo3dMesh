@@ -1,0 +1,3 @@
+[submodule "TripoSR"]
+	path = TripoSR
+	url = https://github.com/gkushalg01/TripoSR.git
