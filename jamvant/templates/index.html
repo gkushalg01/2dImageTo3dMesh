@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D to 3D Model Editor</title>
+    <style>
+        /* Basic styling */
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; }
+        .container { display: flex; }
+        .left-panel, .right-panel { flex: 1; padding: 20px; }
+        .button { margin-top: 10px; padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        .button:disabled { background-color: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h3>Upload Image</h3>
+            <input type="file" id="imageInput" accept="image/png">
+        </div>
+        <div class="right-panel">
+            <h3>3D Model</h3>
+            <div id="modelViewer" style="width: 500px; height: 500px;"></div>
+            <button class="button" id="downloadButton" style="display:none;">Download</button>
+        </div>
+    </div>
+
+    <div style="padding: 20px;">
+        <input type="text" id="promptInput" placeholder="Enter prompt to modify 3D model" style="width: 80%;">
+        <button class="button" id="goButton" disabled>Go</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let modelPath = '';
+        let imageUploaded = false;
+        let promptSubmitted = false;
+
+        document.getElementById('imageInput').addEventListener('change', function(event) {
+            const formData = new FormData();
+            formData.append('image', event.target.files[0]);
+
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                modelPath = data.model;
+                imageUploaded = true;
+                enableGoButton();
+                loadModel(modelPath);
+            });
+        });
+
+        document.getElementById('goButton').addEventListener('click', function() {
+            const prompt = document.getElementById('promptInput').value;
+            if (imageUploaded) {
+                fetch('/modify_model', {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        prompt: prompt,
+                        model_path: modelPath
+                    })
+                }).then(() => {
+                    loadModel(modelPath);
+                });
+            }
+        });
+
+        function enableGoButton() {
+            const prompt = document.getElementById('promptInput').value;
+            document.getElementById('goButton').disabled = !(imageUploaded || prompt);
+        }
+
+        function loadModel(modelPath) {
+            const viewer = document.getElementById('modelViewer');
+            const loader = new THREE.OBJLoader();
+            loader.load(`/get_model/${modelPath}`, function(object) {
+                const scene = new THREE.Scene();
+                scene.add(object);
+
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
+
+                const renderer = new THREE.WebGLRenderer();
+                renderer.setSize(500, 500);
+                viewer.appendChild(renderer.domElement);
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    object.rotation.x += 0.01;
+                    object.rotation.y += 0.01;
+                    renderer.render(scene, camera);
+                }
+                animate();
+            });
+        }
+    </script>
+</body>
+</html>

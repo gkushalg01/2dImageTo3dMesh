@@ -1,0 +1,9 @@
+docker build -t jamvant .
+
+docker run -it --gpus all -v $(pwd):/workspace -w /workspace jamvant
+
+
+docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+
+
+python3 run.py examples/robot.png --bake-texture --render

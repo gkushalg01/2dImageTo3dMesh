@@ -1,3 +1,6 @@
 [submodule "TripoSR"]
 	path = TripoSR
 	url = https://github.com/gkushalg01/TripoSR.git
+[submodule "text2mesh"]
+	path = text2mesh
+	url = https://github.com/gkushalg01/text2mesh.git

@@ -1,5 +1,27 @@
 # sudo apt install -y libgl1 libglib2.0-0 ninja-build cmake build-essential
+# https://github.com/gkushalg01/TripoSR/tree/d26e33181947bbbc4c6fc0f5734e1ec6c080956e <Tripo SR without GPU>
 
-torch
-torchvision
-torchaudio
+numpy
+torch==1.12.1
+torchvision==0.13.1
+torchaudio==0.12.1
+onnxruntime
+omegaconf==2.3.0
+Pillow==10.1.0
+einops==0.7.0
+# git+https://github.com/tatsy/torchmcubes.git
+transformers==4.35.0
+trimesh==4.0.5
+rembg
+huggingface-hub
+imageio[ffmpeg]
+xatlas==0.0.9
+moderngl==5.10.0
+setuptools>=49.6.0
+gradio<=4.19.2
+fastapi<0.110.0
+pydantic<2.0.0
+Flask
+flask-cors
+git+https://github.com/openai/CLIP.git@d50d76daa670286dd6cacf3bcd80b5e4823fc8e1
+git+https://github.com/NVIDIAGameWorks/kaolin@a00029e5e093b5a7fe7d3a10bf695c0f01e3bd98
