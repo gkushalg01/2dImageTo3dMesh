@@ -1,102 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D to 3D Model Editor</title>
-    <style>
-        /* Basic styling */
-        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; }
-        .container { display: flex; }
-        .left-panel, .right-panel { flex: 1; padding: 20px; }
-        .button { margin-top: 10px; padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
-        .button:disabled { background-color: #ccc; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D to 3D Model Editor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      display: flex;
+    }
+    .left-panel,
+    .right-panel {
+      flex: 1;
+      padding: 20px;
+    }
+    .button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .button:disabled {
+      background-color: #ccc;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="left-panel">
-            <h3>Upload Image</h3>
-            <input type="file" id="imageInput" accept="image/png">
-        </div>
-        <div class="right-panel">
-            <h3>3D Model</h3>
-            <div id="modelViewer" style="width: 500px; height: 500px;"></div>
-            <button class="button" id="downloadButton" style="display:none;">Download</button>
-        </div>
+  <div class="container">
+    <div class="left-panel">
+      <h3>Upload Image</h3>
+      <input type="file" id="imageInput" accept="image/png" />
     </div>
-
-    <div style="padding: 20px;">
-        <input type="text" id="promptInput" placeholder="Enter prompt to modify 3D model" style="width: 80%;">
-        <button class="button" id="goButton" disabled>Go</button>
+    <div class="right-panel">
+      <h3>3D Model</h3>
+      <div id="modelViewer" style="width: 500px; height: 500px;"></div>
+      <button class="button" id="downloadButton" style="display:none;">Download</button>
     </div>
+  </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        let modelPath = '';
-        let imageUploaded = false;
-        let promptSubmitted = false;
+  <div style="padding: 20px;">
+    <input type="text" id="promptInput" placeholder="Enter prompt to modify 3D model" style="width: 80%;" />
+    <button class="button" id="goButton" disabled>Go</button>
+  </div>
 
-        document.getElementById('imageInput').addEventListener('change', function(event) {
-            const formData = new FormData();
-            formData.append('image', event.target.files[0]);
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://threejs.org/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+  <script>
+    let modelPath = '';
+    let imageUploaded = false;
 
-            fetch('/upload_image', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                modelPath = data.model;
-                imageUploaded = true;
-                enableGoButton();
-                loadModel(modelPath);
-            });
+    document.getElementById('imageInput').addEventListener('change', function(event) {
+      const formData = new FormData();
+      formData.append('image', event.target.files[0]);
+
+      fetch('/upload_image', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        modelPath = data.model;
+        imageUploaded = true;
+        document.getElementById('goButton').disabled = !(imageUploaded && prompt);
+        loadModel(modelPath);
+      });
+    });
+
+    document.getElementById('goButton').addEventListener('click', function() {
+      const prompt = document.getElementById('promptInput').value;
+      if (imageUploaded && prompt.trim() !== '') {
+        fetch('/modify_model', {
+          method: 'POST',
+          body: new URLSearchParams({
+            prompt: prompt,
+            model_path: modelPath
+          })
+        }).then(() => {
+          loadModel(modelPath + '?t=' + Date.now()); // bust cache
         });
+      }
+    });
 
-        document.getElementById('goButton').addEventListener('click', function() {
-            const prompt = document.getElementById('promptInput').value;
-            if (imageUploaded) {
-                fetch('/modify_model', {
-                    method: 'POST',
-                    body: new URLSearchParams({
-                        prompt: prompt,
-                        model_path: modelPath
-                    })
-                }).then(() => {
-                    loadModel(modelPath);
-                });
-            }
-        });
+    function loadModel(path) {
+      const viewer = document.getElementById('modelViewer');
+      
+      viewer.innerHTML = ''; // Clear previous renderer
 
-        function enableGoButton() {
-            const prompt = document.getElementById('promptInput').value;
-            document.getElementById('goButton').disabled = !(imageUploaded || prompt);
+      const loader = new THREE.OBJLoader();
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+      camera.position.z = 5;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(500, 500);
+      viewer.innerHTML = ''; // Clear previous content
+      viewer.appendChild(renderer.domElement);
+
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(1, 1, 1).normalize();
+      scene.add(light);
+
+      const ambientLight = new THREE.AmbientLight(0x404040); // soft light
+      scene.add(ambientLight);
+
+      loader.load(`/get_model/${path}`, function(object) {
+        object.scale.set(1, 1, 1);
+        scene.add(object);
+
+        function animate() {
+          requestAnimationFrame(animate);
+          object.rotation.y += 0.01;
+          renderer.render(scene, camera);
         }
-
-        function loadModel(modelPath) {
-            const viewer = document.getElementById('modelViewer');
-            const loader = new THREE.OBJLoader();
-            loader.load(`/get_model/${modelPath}`, function(object) {
-                const scene = new THREE.Scene();
-                scene.add(object);
-
-                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                camera.position.z = 5;
-
-                const renderer = new THREE.WebGLRenderer();
-                renderer.setSize(500, 500);
-                viewer.appendChild(renderer.domElement);
-
-                function animate() {
-                    requestAnimationFrame(animate);
-                    object.rotation.x += 0.01;
-                    object.rotation.y += 0.01;
-                    renderer.render(scene, camera);
-                }
-                animate();
-            });
-        }
-    </script>
+        animate();
+      }, undefined, function(error) {
+        console.error('Error loading OBJ model:', error);
+      });
+    }
+  </script>
 </body>
 </html>
